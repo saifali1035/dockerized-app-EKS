@@ -1,4 +1,4 @@
-Here's a clean and well-formatted document you can use for setting up **`kubectl`**, **`eksctl`**, **Docker**, and **Docker Compose** on an **Amazon Linux EC2 instance**:
+Setting up **`kubectl`**, **`eksctl`**, **Docker**, and **Docker Compose** on an **Amazon Linux EC2 instance**:
 
 ---
 
