@@ -113,3 +113,129 @@ You now have a fully configured environment for:
 
 ---
 
+
+
+Great! Since you've now set up your EC2 instance with `kubectl`, `eksctl`, Docker, and Docker Compose, let's walk through the **3-tier application** you built and deployed.
+
+---
+
+## 🧱 What is a 3-Tier Architecture?
+
+A **3-tier architecture** is a commonly used software architecture pattern that separates concerns into three distinct layers:
+
+| Tier         | Role                                                       |
+| ------------ | ---------------------------------------------------------- |
+| **Frontend** | User interface (UI) that interacts with users              |
+| **Backend**  | Handles business logic and API endpoints                   |
+| **Database** | Stores and retrieves application data (persistent storage) |
+
+---
+
+## ✅ Components of Your 3-Tier Application
+
+You implemented this architecture using:
+
+### 1. **Frontend**
+
+* **Technology**: HTML/JavaScript (or React if used)
+* **Tool**: `http-server` (or served via NGINX in Docker)
+* **Purpose**: Renders UI in a browser and makes API calls to the backend
+
+### 2. **Backend**
+
+* **Technology**: Node.js (Express.js)
+* **Functionality**:
+
+  * Defines API endpoints (e.g., `/api/data`)
+  * Connects to the database
+  * Implements business logic
+
+### 3. **Database**
+
+* **Technology**: MongoDB
+* **Usage**:
+
+  * Stores application data
+  * Backend interacts with this to read/write data
+
+---
+
+## 🔁 How the App Works (Flow)
+
+1. **User opens the app** in a browser via the frontend URL.
+2. **Frontend makes API requests** (e.g., `GET /api/data`) to the backend.
+3. **Backend receives the request**, processes it, and interacts with MongoDB.
+4. **Backend sends response** back to the frontend.
+5. **Frontend displays** the data to the user.
+
+---
+
+## 🐳 Dockerization Overview
+
+You containerized the app using Docker. Here's how:
+
+* **Frontend Dockerfile**:
+
+  * Builds static files
+  * Uses `http-server` or NGINX to serve them
+
+* **Backend Dockerfile**:
+
+  * Installs Node.js dependencies
+  * Runs Express server
+
+* **MongoDB**:
+
+  * Pulled as an official image from Docker Hub
+
+* **Docker Compose**:
+
+  * Defined services (`frontend`, `backend`, `mongo`)
+  * Enabled easy orchestration with network bridging
+
+---
+
+## 📦 Docker Compose Sample (Recap)
+
+```yaml
+version: '3'
+services:
+  mongo:
+    image: mongo
+    container_name: mongo-db
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+
+  backend:
+    build: ./backend
+    ports:
+      - "5000:5000"
+    environment:
+      - MONGO_URL=mongodb://mongo-db:27017/appdb
+    depends_on:
+      - mongo
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+volumes:
+  mongo-data:
+```
+
+---
+
+## 🧪 How to Test
+
+* Visit `http://<EC2_PUBLIC_IP>:3000` – You should see the frontend.
+* Click a button like “Load Data” – Should fetch and display data from the backend.
+* Backend fetches data from MongoDB – proves end-to-end communication.
+
+---
+
+
