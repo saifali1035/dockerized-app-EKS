@@ -57,10 +57,14 @@ sudo mv /tmp/eksctl /usr/local/bin
 
 ---
 
----
 ## ✅ Step 2.1: Create cluster
 
-First Copy the Key in bastion sever and run 
+First Copy the Key in bastion sever 
+```
+ls -l K8s.pem
+scp -i K8s.pem K8s.pem ec2-user@13.233.9.127:/home/ec2-user/
+```
+on bastion host
 ```
 eksctl create cluster -f cluster.yaml
 ```
