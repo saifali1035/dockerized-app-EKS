@@ -57,6 +57,15 @@ sudo mv /tmp/eksctl /usr/local/bin
 
 ---
 
+---
+## ✅ Step 2.1: Create cluster
+
+First Copy the Key in bastion sever and run 
+```
+eksctl create cluster -f cluster.yaml
+```
+---
+
 ## ✅ Step 3: Install Docker
 
 ```bash
