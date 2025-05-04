@@ -19,4 +19,4 @@ nodeGroups:
     privateNetworking: true
     ssh:
       allow: true
-      publicKeyName: K8s.pem
+      publicKeyName: K8s
