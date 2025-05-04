@@ -73,7 +73,7 @@ sudo service docker start
 sudo usermod -a -G docker ec2-user
 ```
 
-> 🔄 You may need to **log out and log back in** or run `newgrp docker` to apply group changes.
+> 🔄 we may need to **log out and log back in** or run `newgrp docker` to apply group changes.
 
 ---
 
@@ -103,9 +103,9 @@ docker-compose version
 
 ---
 
-## 🏁 You're Ready!
+## 🏁 we're Ready!
 
-You now have a fully configured environment for:
+we now have a fully configured environment for:
 
 * Managing **EKS clusters** with `eksctl`
 * Interacting with Kubernetes using `kubectl`
@@ -115,7 +115,7 @@ You now have a fully configured environment for:
 
 
 
-Great! Since you've now set up your EC2 instance with `kubectl`, `eksctl`, Docker, and Docker Compose, let's walk through the **3-tier application** you built and deployed.
+Great! Since we've now set up wer EC2 instance with `kubectl`, `eksctl`, Docker, and Docker Compose, let's walk through the **3-tier application** we built and deployed.
 
 ---
 
@@ -131,9 +131,9 @@ A **3-tier architecture** is a commonly used software architecture pattern that 
 
 ---
 
-## ✅ Components of Your 3-Tier Application
+## ✅ Components of wer 3-Tier Application
 
-You implemented this architecture using:
+we implemented this architecture using:
 
 ### 1. **Frontend**
 
@@ -172,7 +172,7 @@ You implemented this architecture using:
 
 ## 🐳 Dockerization Overview
 
-You containerized the app using Docker. Here's how:
+we containerized the app using Docker. Here's how:
 
 * **Frontend Dockerfile**:
 
@@ -232,7 +232,7 @@ volumes:
 
 ## 🧪 How to Test
 
-* Visit `http://<EC2_PUBLIC_IP>:3000` – You should see the frontend.
+* Visit `http://<EC2_PUBLIC_IP>:3000` – we should see the frontend.
 * Click a button like “Load Data” – Should fetch and display data from the backend.
 * Backend fetches data from MongoDB – proves end-to-end communication.
 
