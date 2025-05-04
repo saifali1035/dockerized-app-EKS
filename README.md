@@ -271,6 +271,3 @@ Once both containers are running:
 * Backend validation & logging
 * CI/CD with GitHub Actions & ECR push
 
----
-
-Would we like me to generate this as a downloadable PDF or add it to wer GitHub `README.md`?
