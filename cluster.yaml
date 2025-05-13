@@ -8,8 +8,8 @@ metadata:
 vpc:
   subnets:
     private:
-      ap-south-1a: { id: subnet-07395fe366bca95ea }
-      ap-south-1b: { id: subnet-0a76334c209955d03 }
+      ap-south-1a: { id: subnet-04f21e155755b8277 }
+      ap-south-1b: { id: subnet-0c90a99b0d06eb8c0 }
 
 nodeGroups:
   - name: ng-1-workers
