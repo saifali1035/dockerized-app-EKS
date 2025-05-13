@@ -10,6 +10,13 @@ on:
 
 jobs:
   runs-on: ubuntu-latest
+
+  env:
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+      FRONTEND_REPO: frontend-app
+      BACKEND_REPO: backend-app
+      
   steps:
     - name: Checkout code
       uses: actions/checkout@v4
