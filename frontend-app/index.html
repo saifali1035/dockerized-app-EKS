@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Frontend App</title>
+</head>
+<body>
+  <h1>📊 Load Data from Backend</h1>
+  <button onclick="loadData()">Load Data</button>
+  <pre id="output"></pre>
+
+  <script>
+    async function loadData() {
+      try {
+        const response = await fetch('http://4.240.39.198:8080/testdb');
+        const result = await response.json();
+        document.getElementById('output').textContent = JSON.stringify(result, null, 2);
+      } catch (error) {
+        console.error('❌ Error:', error);
+        alert('Error fetching data from the backend!');
+      }
+    }
+  </script>
+</body>
+</html>
