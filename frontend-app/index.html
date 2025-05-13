@@ -11,7 +11,7 @@
   <script>
     async function loadData() {
       try {
-        const response = await fetch('http://4.240.39.198:8080/testdb');
+        const response = await fetch('http://localhost:8080/testdb');
         const result = await response.json();
         document.getElementById('output').textContent = JSON.stringify(result, null, 2);
       } catch (error) {
