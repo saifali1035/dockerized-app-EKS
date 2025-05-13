@@ -36,22 +36,30 @@ jobs:
           aws ecr get-login-password --region $AWS_REGION | \
           docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
 
+      - name: Set backend image tag
+        id: backend_image_tag
+        run: echo "BACKEND_IMAGE_TAG=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+
+      - name: Set frontend image tag
+        id: frontend_image_tag
+        run: echo "FRONTEND_IMAGE_TAG=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+
       - name: Build backend Docker image
         run: |
           cd backend-app
-          docker build -t $BACKEND_REPO:latest .
+          docker build -t $BACKEND_REPO:${{ env.BACKEND_IMAGE_TAG }} .
 
       - name: Tag and push backend image
         run: |
-          docker tag $BACKEND_REPO:latest $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$BACKEND_REPO:latest
-          docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$BACKEND_REPO:latest
+          docker tag $BACKEND_REPO:${{ env.BACKEND_IMAGE_TAG }} $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$BACKEND_REPO:${{ env.BACKEND_IMAGE_TAG }}
+          docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$BACKEND_REPO:${{ env.BACKEND_IMAGE_TAG }}
 
       - name: Build frontend Docker image
         run: |
           cd frontend-app
-          docker build -t $FRONTEND_REPO:latest .
+          docker build -t $FRONTEND_REPO:${{ env.FRONTEND_IMAGE_TAG }} .
 
       - name: Tag and push frontend image
         run: |
-          docker tag $FRONTEND_REPO:latest $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$FRONTEND_REPO:latest
-          docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$FRONTEND_REPO:latest
+          docker tag $FRONTEND_REPO:${{ env.FRONTEND_IMAGE_TAG }} $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$FRONTEND_REPO:${{ env.FRONTEND_IMAGE_TAG }}
+          docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$FRONTEND_REPO:${{ env.FRONTEND_IMAGE_TAG }}
