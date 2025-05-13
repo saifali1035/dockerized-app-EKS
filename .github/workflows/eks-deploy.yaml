@@ -63,3 +63,17 @@ jobs:
         run: |
           docker tag $FRONTEND_REPO:${{ env.FRONTEND_IMAGE_TAG }} $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$FRONTEND_REPO:${{ env.FRONTEND_IMAGE_TAG }}
           docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$FRONTEND_REPO:${{ env.FRONTEND_IMAGE_TAG }}
+
+      - name: Update image tags in Kubernetes manifests
+        run: |
+          sed -i "s|image: .*/frontend-app:.*|image: $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/frontend-app:$SHORT_HASH|" k8s/frontend-deployment.yaml
+          sed -i "s|image: .*/backend-app:.*|image: $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/backend-app:$SHORT_HASH|" k8s/backend-deployment.yaml
+
+      - name: Commit and push manifest updates
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add k8s/*.yaml
+          git commit -m "🔄 Update image tags to $SHORT_HASH"
+          git push origin master
+
