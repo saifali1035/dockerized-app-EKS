@@ -146,19 +146,32 @@ jobs:
           git clone https://x-access-token:${{ secrets.HELM_REPO_TOKEN }}@github.com/saifali1035/eks-app-helm-chart.git
           cd eks-app-helm-chart
 
-          BRANCH=update-images-$VERSION
+          # Ensure we have all branches locally
+          git fetch origin
+          git checkout main
+          git pull origin main
+
+          BRANCH="update-images-$VERSION"
           git checkout -b $BRANCH
 
           # Update tag
           sed -i "s/tag: \".*\"/tag: \"$VERSION\"/" dockerized-app/values.yaml
 
 
-          git commit -am "Update frontend and backend image tags to $VERSION"
+          # Check if there are any changes
+          if git diff --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+
+          git add .
+          git commit -m "Update frontend and backend image tags to $VERSION"
           git push origin $BRANCH
 
           gh pr create --title "Update image tags to $VERSION" \
                        --body "Auto-update of Helm charts for version $VERSION" \
                        --base main \
-                       --head $BRANCH
+                       --head $BRANCH \
+                       --repo saifali1035/eks-app-helm-chart
         env:
           GITHUB_TOKEN: ${{ secrets.HELM_REPO_TOKEN }}
