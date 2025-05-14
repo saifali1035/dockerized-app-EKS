@@ -1,6 +1,6 @@
 {
   "name": "frontend-app",
-  "version": "1.1.0",
+  "version": "2.0.0",
   "description": "Simple frontend for backend test",
   "scripts": {
     "start": "http-server -p 3000"
@@ -9,3 +9,11 @@
     "http-server": "^14.1.1"
   }
 }
+
+
+argocd app create <app-name> \
+  --repo https://github.com/saifali1035/eks-app-helm-chart \
+  --path dockerized-app \
+  --dest-server https://kubernetes.default.svc \
+  --dest-namespace default \
+  --sync-policy automated
