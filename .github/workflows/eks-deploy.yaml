@@ -149,11 +149,9 @@ jobs:
           BRANCH=update-images-$VERSION
           git checkout -b $BRANCH
 
-          # Update frontend tag
-          sed -i "s/tag: \".*\"/tag: \"$VERSION\"/" charts/frontend/values.yaml
+          # Update tag
+          sed -i "s/tag: \".*\"/tag: \"$VERSION\"/" dockerized-app/values.yaml
 
-          # Update backend tag
-          sed -i "s/tag: \".*\"/tag: \"$VERSION\"/" charts/backend/values.yaml
 
           git commit -am "Update frontend and backend image tags to $VERSION"
           git push origin $BRANCH
