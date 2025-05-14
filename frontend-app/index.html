@@ -4,7 +4,7 @@
   <title>Frontend App</title>
 </head>
 <body>
-  <h1>✅ App Version - v1.0.0</h1>
+  <h1>✅ App Version - v1.1.0</h1>
   <h1>📊 Load Data from Backend</h1>
   <button onclick="loadData()">Load Data</button>
   <pre id="output"></pre>
@@ -12,7 +12,7 @@
   <script>
     async function loadData() {
       try {
-        const response = await fetch('http://ac7d82b3d71374e83a981ec074ffc2c4-1864906922.ap-south-1.elb.amazonaws.com:8080/testdb');
+        const response = await fetch('http://ac7d82b3d71374e83a981ec074ffc2c4-1864906922.ap-south-1.elb.amazonaws.com/testdb');
         const result = await response.json();
         document.getElementById('output').textContent = JSON.stringify(result, null, 2);
       } catch (error) {
