@@ -9,11 +9,3 @@
     "http-server": "^14.1.1"
   }
 }
-
-
-argocd app create <app-name> \
-  --repo https://github.com/saifali1035/eks-app-helm-chart \
-  --path dockerized-app \
-  --dest-server https://kubernetes.default.svc \
-  --dest-namespace default \
-  --sync-policy automated
