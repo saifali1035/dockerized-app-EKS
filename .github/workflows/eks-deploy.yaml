@@ -148,8 +148,8 @@ jobs:
 
           # Ensure we have all branches locally
           git fetch origin
-          git checkout main
-          git pull origin main
+          git checkout master
+          git pull origin master
 
           BRANCH="update-images-$VERSION"
           git checkout -b $BRANCH
