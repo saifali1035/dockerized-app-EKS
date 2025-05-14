@@ -7,20 +7,66 @@ on:
       - 'frontend-app/**'
       - 'backend-app/**'
       - '.github/workflows/**'
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+  FRONTEND_REPO: frontend-app
+  BACKEND_REPO: backend-app
 
 jobs:
-  build-and-push:
+  build-backend:
     runs-on: ubuntu-latest
-
-    env:
-      AWS_REGION: ${{ secrets.AWS_REGION }}
-      AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
-      FRONTEND_REPO: frontend-app
-      BACKEND_REPO: backend-app
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Build backend Docker image
+        run: |
+          cd backend-app
+          docker build -t $BACKEND_REPO:latest .
+          docker save $BACKEND_REPO:latest -o backend.tar
+
+      - name: Upload backend image
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-image
+          path: backend-app/backend.tar
+
+  build-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build frontend Docker image
+        run: |
+          cd frontend-app
+          docker build -t $FRONTEND_REPO:latest .
+          docker save $FRONTEND_REPO:latest -o frontend.tar
+
+      - name: Upload frontend image
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-image
+          path: frontend-app/frontend.tar
+
+
+  push-images:
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Download frontend artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-image
+          path: .
+
+      - name: Download backend artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-image
+          path: .
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
@@ -34,23 +80,22 @@ jobs:
         run: |
           aws ecr get-login-password --region $AWS_REGION | \
           docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
-
-      - name: Build backend Docker image
+          
+      - name: Extract version from package.json
+        id: extract_version
         run: |
-          cd backend-app
-          docker build -t $BACKEND_REPO:latest .
+          VERSION=$(jq -r .version frontend-app/package.json)
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "Frontend version: $VERSION"
 
-      - name: Tag and push backend image
+      - name: Tag and push backend image with version
         run: |
-          docker tag $BACKEND_REPO:latest $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$BACKEND_REPO:latest
-          docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$BACKEND_REPO:latest
+          docker load -i backend.tar
+          docker tag $BACKEND_REPO:latest $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$BACKEND_REPO:$VERSION
+          docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$BACKEND_REPO:$VERSION
 
-      - name: Build frontend Docker image
+      - name: Tag and push backend image with version
         run: |
-          cd frontend-app
-          docker build -t $FRONTEND_REPO:latest .
-
-      - name: Tag and push frontend image
-        run: |
-          docker tag $FRONTEND_REPO:latest $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$FRONTEND_REPO:latest
-          docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$FRONTEND_REPO:latest
+          docker load -i frontend.tar
+          docker tag $FRONTEND_REPO:latest $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$FRONTEND_REPO:$VERSION
+          docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$FRONTEND_REPO:$VERSION
