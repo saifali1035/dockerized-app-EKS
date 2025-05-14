@@ -7,6 +7,7 @@ on:
       - 'frontend-app/**'
       - 'backend-app/**'
       - '.github/workflows/**'
+
 env:
   AWS_REGION: ${{ secrets.AWS_REGION }}
   AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
@@ -16,7 +17,6 @@ env:
 jobs:
   build-backend:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -50,7 +50,7 @@ jobs:
         with:
           name: version
           path: version.txt
-          
+
       - name: Build frontend Docker image
         run: |
           cd frontend-app
@@ -63,12 +63,10 @@ jobs:
           name: frontend-image
           path: frontend-app/frontend.tar
 
-
   push-images:
     needs: [build-frontend, build-backend]
     runs-on: ubuntu-latest
     steps:
-
       - name: Download frontend artifact
         uses: actions/download-artifact@v4
         with:
@@ -80,7 +78,7 @@ jobs:
         with:
           name: backend-image
           path: .
-          
+
       - name: Download version file
         uses: actions/download-artifact@v4
         with:
@@ -100,7 +98,6 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Login to Amazon ECR
-        id: login-ecr
         run: |
           aws ecr get-login-password --region $AWS_REGION | \
           docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
@@ -111,8 +108,59 @@ jobs:
           docker tag $BACKEND_REPO:latest $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$BACKEND_REPO:$VERSION
           docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$BACKEND_REPO:$VERSION
 
-      - name: Tag and push backend image with version
+      - name: Tag and push frontend image with version
         run: |
           docker load -i frontend.tar
           docker tag $FRONTEND_REPO:latest $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$FRONTEND_REPO:$VERSION
           docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$FRONTEND_REPO:$VERSION
+
+  manual-approval:
+    needs: push-images
+    runs-on: ubuntu-latest
+    environment:
+      name: helm-approval
+    steps:
+      - name: Wait for manual approval
+        run: echo "Awaiting manual approval before updating Helm chart."
+
+  update-helm-chart:
+    needs: manual-approval
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download version file
+        uses: actions/download-artifact@v4
+        with:
+          name: version
+          path: .
+
+      - name: Read version from file
+        run: |
+          VERSION=$(cat version.txt)
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+      - name: Clone Helm Chart Repo
+        run: |
+          git config --global user.email "ci-bot@yourcompany.com"
+          git config --global user.name "CI Bot"
+
+          git clone https://x-access-token:${{ secrets.HELM_REPO_TOKEN }}@github.com/saifali1035/eks-app-helm-chart.git
+          cd eks-app-helm-chart
+
+          BRANCH=update-images-$VERSION
+          git checkout -b $BRANCH
+
+          # Update frontend tag
+          sed -i "s/tag: \".*\"/tag: \"$VERSION\"/" charts/frontend/values.yaml
+
+          # Update backend tag
+          sed -i "s/tag: \".*\"/tag: \"$VERSION\"/" charts/backend/values.yaml
+
+          git commit -am "Update frontend and backend image tags to $VERSION"
+          git push origin $BRANCH
+
+          gh pr create --title "Update image tags to $VERSION" \
+                       --body "Auto-update of Helm charts for version $VERSION" \
+                       --base main \
+                       --head $BRANCH
+        env:
+          GITHUB_TOKEN: ${{ secrets.HELM_REPO_TOKEN }}
