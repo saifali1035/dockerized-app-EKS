@@ -170,7 +170,7 @@ jobs:
 
           gh pr create --title "Update image tags to $VERSION" \
                        --body "Auto-update of Helm charts for version $VERSION" \
-                       --base main \
+                       --base master \
                        --head $BRANCH \
                        --repo saifali1035/eks-app-helm-chart
         env:
