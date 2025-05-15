@@ -283,4 +283,341 @@ Once both containers are running:
 * Frontend framework (React/Vue)
 * Backend validation & logging
 * CI/CD with GitHub Actions & ECR push
+---
+## ✅ Step 5: Create ECR Repos to hold our build images.
+
+```
+sh ecr_repo_create.sh
+```
+
+---
+## ✅ Step 5: Integrate our CI using GitHub Workflow.
+
+Create following secrets in your repo 
+* AWS_REGION
+* AWS_ACCOUNT_ID
+* AWS_ACCESS_KEY_ID
+* AWS_SECRET_ACCESS_KEY
+* HELM_REPO_TOKEN - Github token
+
+<img width="1154" alt="image" src="https://github.com/user-attachments/assets/f581c63c-889f-43ea-91c0-3af4fe1c48a0" />
+
+
+```
+name: EKS Deployment
+
+on:
+  push:
+    branches: [ master ]
+    paths:
+      - 'frontend-app/**'
+      - 'backend-app/**'
+      - '.github/workflows/**'
+
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+  FRONTEND_REPO: frontend-app
+  BACKEND_REPO: backend-app
+
+jobs:
+  build-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build backend Docker image
+        run: |
+          cd backend-app
+          docker build -t $BACKEND_REPO:latest .
+          docker save $BACKEND_REPO:latest -o backend.tar
+
+      - name: Upload backend image
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-image
+          path: backend-app/backend.tar
+
+  build-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Extract version from package.json
+        id: extract_version
+        run: |
+          VERSION=$(jq -r .version frontend-app/package.json)
+          echo "$VERSION" > version.txt
+
+      - name: Upload version file
+        uses: actions/upload-artifact@v4
+        with:
+          name: version
+          path: version.txt
+
+      - name: Build frontend Docker image
+        run: |
+          cd frontend-app
+          docker build -t $FRONTEND_REPO:latest .
+          docker save $FRONTEND_REPO:latest -o frontend.tar
+
+      - name: Upload frontend image
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-image
+          path: frontend-app/frontend.tar
+
+  push-images:
+    needs: [build-frontend, build-backend]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download frontend artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-image
+          path: .
+
+      - name: Download backend artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-image
+          path: .
+
+      - name: Download version file
+        uses: actions/download-artifact@v4
+        with:
+          name: version
+          path: .
+
+      - name: Read version from file
+        run: |
+          VERSION=$(cat version.txt)
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        run: |
+          aws ecr get-login-password --region $AWS_REGION | \
+          docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
+
+      - name: Tag and push backend image with version
+        run: |
+          docker load -i backend.tar
+          docker tag $BACKEND_REPO:latest $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$BACKEND_REPO:$VERSION
+          docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$BACKEND_REPO:$VERSION
+
+      - name: Tag and push frontend image with version
+        run: |
+          docker load -i frontend.tar
+          docker tag $FRONTEND_REPO:latest $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$FRONTEND_REPO:$VERSION
+          docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$FRONTEND_REPO:$VERSION
+
+  manual-approval:
+    needs: push-images
+    runs-on: ubuntu-latest
+    environment:
+      name: helm-approval
+    steps:
+      - name: Wait for manual approval
+        run: echo "Awaiting manual approval before updating Helm chart."
+
+  update-helm-chart:
+    needs: manual-approval
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download version file
+        uses: actions/download-artifact@v4
+        with:
+          name: version
+          path: .
+
+      - name: Read version from file
+        run: |
+          VERSION=$(cat version.txt)
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+      - name: Clone Helm Chart Repo
+        run: |
+          git config --global user.email "ci-bot@yourcompany.com"
+          git config --global user.name "CI Bot"
+
+          git clone https://x-access-token:${{ secrets.HELM_REPO_TOKEN }}@github.com/saifali1035/eks-app-helm-chart.git
+          cd eks-app-helm-chart
+
+          # Ensure we have all branches locally
+          git fetch origin
+          git checkout master
+          git pull origin master
+
+          BRANCH="update-images-$VERSION"
+          git checkout -b $BRANCH
+
+          # Update tag
+          sed -i "s/tag: \".*\"/tag: \"$VERSION\"/" dockerized-app/values.yaml
+
+
+          # Check if there are any changes
+          if git diff --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+
+          git add .
+          git commit -m "Update frontend and backend image tags to $VERSION"
+          git push origin $BRANCH
+
+          gh pr create --title "Update image tags to $VERSION" \
+                       --body "Auto-update of Helm charts for version $VERSION" \
+                       --base master \
+                       --head $BRANCH \
+                       --repo saifali1035/eks-app-helm-chart
+        env:
+          GITHUB_TOKEN: ${{ secrets.HELM_REPO_TOKEN }}
+```
+
+This GitHub Actions workflow automates the **build, versioning, push, and deployment process** for a Dockerized 3-tier application (React frontend + Node.js backend) deployed on Amazon EKS using **Helm charts**.
+
+**Workflow Name:** `EKS Deployment`
+**Triggers:**
+
+* On push to the `master` branch
+* When any of these paths change:
+
+  * `frontend-app/**`
+  * `backend-app/**`
+  * `.github/workflows/**`
+
+**Goals:**
+
+* Build Docker images for frontend and backend
+* Tag them using the frontend version (from `package.json`)
+* Push them to Amazon ECR
+* Create a PR to update the Helm chart with the new version tags
+* Await manual approval before Helm PR is created
+
+---
+
+## 📂 **Environment Variables**
+
+```yaml
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+  FRONTEND_REPO: frontend-app
+  BACKEND_REPO: backend-app
+```
+
+These are global environment variables used in all jobs. The values are securely pulled from GitHub secrets.
+
+---
+
+## 🔨 **Job 1: `build-backend`**
+
+**Steps:**
+
+1. **Checkout code**: Retrieves the latest code.
+2. **Build backend Docker image**: Uses the `Dockerfile` in `backend-app/`, tags as `latest`.
+3. **Save and upload image**: Saves the image as a `.tar` file and uploads as an artifact (`backend-image`) to be shared with other jobs.
+
+---
+
+## 🌐 **Job 2: `build-frontend`**
+
+**Steps:**
+
+1. **Checkout code**.
+2. **Extract version** from `frontend-app/package.json` using `jq`, save it in `version.txt`.
+3. **Upload version** file as an artifact (`version`).
+4. **Build frontend Docker image**, tag as `latest`.
+5. **Save and upload** frontend image as an artifact (`frontend-image`).
+
+---
+
+## 📦 **Job 3: `push-images`**
+
+**Dependencies:** `build-frontend`, `build-backend`
+
+**Steps:**
+
+1. **Download artifacts**: Retrieves `frontend.tar`, `backend.tar`, and `version.txt`.
+2. **Read version** into GitHub environment.
+3. **Configure AWS credentials** using `aws-actions/configure-aws-credentials@v2`.
+4. **Login to Amazon ECR**.
+5. **Tag and push backend image** to ECR:
+
+   * Tag as `aws_account_id.dkr.ecr.region.amazonaws.com/backend-app:$VERSION`
+6. **Tag and push frontend image** similarly.
+
+---
+
+## ✋ **Job 4: `manual-approval`** - Just Placeholder approval can be added in github enterprise
+
+**Dependencies:** `push-images`
+
+**Steps:**
+
+* Dummy job that does nothing but requires **manual approval** to proceed.
+* Runs under `environment: helm-approval` which can be configured in GitHub Environments to enforce human gatekeeping (optional reviewers, etc.).
+
+---
+
+## 🧠 **Job 5: `update-helm-chart`**
+
+**Dependencies:** `manual-approval`
+
+**Steps:**
+
+1. **Download version** from artifacts.
+2. **Set version as ENV variable**.
+3. **Clone the Helm chart repo** `saifali1035/eks-app-helm-chart` using `HELM_REPO_TOKEN` for access.
+4. **Create a feature branch** named `update-images-$VERSION`.
+5. **Update the Helm values.yaml**:
+
+   * Uses `sed` to find and replace the Docker tag version.
+   * Assumes both frontend and backend tags are the same.
+6. **Check for changes** using `git diff --quiet` to avoid redundant PRs.
+7. **Push branch and create Pull Request**:
+
+   * Title: `Update image tags to $VERSION`
+   * Body: Auto-generated
+   * Base: `master`
+   * Head: `update-images-$VERSION`
+   * Uses GitHub CLI (`gh pr create`) to create the PR automatically.
+
+---
+
+## 🔒 **Security**
+
+* Uses **GitHub Secrets** for:
+
+  * AWS credentials
+  * ECR push
+  * Private Helm repo access (`HELM_REPO_TOKEN`)
+* Builds and pushes are isolated in separate jobs with artifacts used to pass images.
+
+---
+
+## ✅ **Benefits**
+
+* Fully automated CI/CD pipeline for EKS
+* Controlled, versioned deployments
+* Decouples image build from deployment
+* Enforces manual approval before Helm update
+* Avoids unnecessary PRs via diff check
+
+---
+
+Let me know if you want to:
+
+* Add support for `qa` or `prod` environments
+* Use ArgoCD to auto-deploy after Helm update
+* Integrate test cases or static analysis before push
 
