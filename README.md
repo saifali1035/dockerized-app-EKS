@@ -291,7 +291,7 @@ sh ecr_repo_create.sh
 ```
 
 ---
-## ✅ Step 5: Integrate our CI using GitHub Workflow.
+## ✅ Step 6: Integrate our CI using GitHub Workflow.
 
 Create following secrets in your repo 
 * AWS_REGION
@@ -614,10 +614,36 @@ These are global environment variables used in all jobs. The values are securely
 * Avoids unnecessary PRs via diff check
 
 ---
+## ✅ Step 7: install argocd for gitops
 
-Let me know if you want to:
+```
+kubectl create namespace argocd
+kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
 
-* Add support for `qa` or `prod` environments
-* Use ArgoCD to auto-deploy after Helm update
-* Integrate test cases or static analysis before push
+```
+For a more user-friendly experience, you can expose the Argo CD API server using LoadBalancer, but be aware this incurs extra costs. To do this, run the command: 
 
+```
+kubectl patch svc argocd-server -n argocd -p '{"spec": {"type": "LoadBalancer"}}'
+```
+
+---
+## ✅ Step 8: Configure ArgoCD to Read Your Helm Chart Repo
+
+```
+argocd login <argocd-server-ip> --username admin --password <password>
+```
+
+to get password run this - 
+```
+kubectl get secret argocd-initial-admin-secret -n argocd -o jsonpath='{.data.password}' | base64 -d
+```
+
+```
+argocd app create eks-cluster \
+  --repo https://github.com/saifali1035/eks-app-helm-chart \
+  --path dockerized-app \
+  --dest-server https://kubernetes.default.svc \
+  --dest-namespace default \
+  --sync-policy automated
+```
