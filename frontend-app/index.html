@@ -12,7 +12,7 @@
   <script>
     async function loadData() {
       try {
-        const response = await fetch('http://ac7d82b3d71374e83a981ec074ffc2c4-1864906922.ap-south-1.elb.amazonaws.com/testdb');
+        const response = await fetch('/testdb');
         const result = await response.json();
         document.getElementById('output').textContent = JSON.stringify(result, null, 2);
       } catch (error) {
