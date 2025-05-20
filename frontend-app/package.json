@@ -1,6 +1,6 @@
 {
   "name": "frontend-app",
-  "version": "1.2.0",
+  "version": "v1.2.1",
   "description": "Simple frontend for backend test",
   "scripts": {
     "start": "http-server -p 3000"
