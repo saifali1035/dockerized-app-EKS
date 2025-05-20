@@ -19,6 +19,38 @@
       font-size: 24px;
     }
 
+    .top-bar {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 12px;
+      padding: 20px;
+      flex-wrap: wrap;
+    }
+
+    .load-btn {
+      padding: 12px 24px;
+      font-size: 16px;
+      background-color: #4f46e5;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    .load-btn:hover {
+      background-color: #4338ca;
+    }
+
+    .search-input {
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      width: 260px;
+    }
+
     .container {
       padding: 30px;
       display: flex;
@@ -51,77 +83,115 @@
       color: #666;
     }
 
-    .load-btn {
-      margin: 30px auto;
-      display: block;
-      padding: 12px 24px;
-      font-size: 16px;
-      background-color: #4f46e5;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: background-color 0.2s;
-    }
-
-    .load-btn:hover {
-      background-color: #4338ca;
-    }
-
     .message {
       text-align: center;
       color: #888;
       font-size: 18px;
       margin-top: 40px;
     }
+
+    .spinner {
+      border: 6px solid #f3f3f3;
+      border-top: 6px solid #4f46e5;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 40px auto;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
   </style>
 </head>
 <body>
-  <h1> ✅ v1.2.2 </h1>
+  <h1>✅ v1.3.0</h1>
   <header>📦 DynamoDB Items Viewer</header>
 
-  <button class="load-btn" onclick="loadData()">🔄 Load Items</button>
+  <div class="top-bar">
+    <button class="load-btn" onclick="loadData()">🔄 Load Items</button>
+    <input type="text" id="search" class="search-input" placeholder="🔍 Search by name..." oninput="filterCards()">
+  </div>
 
   <div class="container" id="card-container"></div>
+  <div class="spinner" id="spinner" style="display: none;"></div>
   <div class="message" id="message-box"></div>
 
   <script>
+    let allItems = [];
+
     async function loadData() {
       const container = document.getElementById('card-container');
       const messageBox = document.getElementById('message-box');
+      const spinner = document.getElementById('spinner');
+      const searchBox = document.getElementById('search');
+
       container.innerHTML = '';
       messageBox.textContent = '';
+      spinner.style.display = 'block';
+      allItems = [];
+      searchBox.value = '';
 
       try {
         const res = await fetch('/testdb');
         const json = await res.json();
         const items = json.data?.Items || [];
 
+        spinner.style.display = 'none';
+
         if (items.length === 0) {
           messageBox.textContent = '⚠️ No records found in DynamoDB.';
           return;
         }
 
-        items.forEach(item => {
-  const name = item.name && item.name.S;
-  const id = item.id && item.id.S;
-  const description = item.description && item.description.S;
+        // Sort items by id (as number)
+        allItems = items.sort((a, b) => {
+          const idA = parseInt(a.id?.S || 0);
+          const idB = parseInt(b.id?.S || 0);
+          return idA - idB;
+        });
 
-  const card = document.createElement('div');
-  card.className = 'card';
-
-  card.innerHTML = `
-    <h2>${name || 'Unnamed'}</h2>
-    <p><strong>ID:</strong> ${id || '-'}</p>
-    <p>${description || 'No description available'}</p>
-  `;
-
-  container.appendChild(card);
-});
+        renderCards(allItems);
       } catch (err) {
         console.error(err);
+        spinner.style.display = 'none';
         messageBox.textContent = '❌ Failed to load data.';
       }
+    }
+
+    function renderCards(items) {
+      const container = document.getElementById('card-container');
+      container.innerHTML = '';
+
+      items.forEach(item => {
+        const name = item.name?.S || 'Unnamed';
+        const id = item.id?.S || '-';
+        const description = item.description?.S || 'No description available';
+
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.setAttribute('data-name', name.toLowerCase());
+
+        card.innerHTML = `
+          <h2>${name}</h2>
+          <p><strong>ID:</strong> ${id}</p>
+          <p>${description}</p>
+        `;
+
+        container.appendChild(card);
+      });
+    }
+
+    function filterCards() {
+      const query = document.getElementById('search').value.toLowerCase();
+      const cards = document.querySelectorAll('.card');
+
+      cards.forEach(card => {
+        const name = card.getAttribute('data-name');
+        card.style.display = name.includes(query) ? 'block' : 'none';
+      });
     }
   </script>
 
