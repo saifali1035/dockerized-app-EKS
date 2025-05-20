@@ -77,7 +77,7 @@
   </style>
 </head>
 <body>
-  <h1> ✅ v1.2.1 </h1>
+  <h1> ✅ v1.2.2 </h1>
   <header>📦 DynamoDB Items Viewer</header>
 
   <button class="load-btn" onclick="loadData()">🔄 Load Items</button>
@@ -103,17 +103,21 @@
         }
 
         items.forEach(item => {
-          const card = document.createElement('div');
-          card.className = 'card';
+  const name = item.name && item.name.S;
+  const id = item.id && item.id.S;
+  const description = item.description && item.description.S;
 
-          card.innerHTML = `
-            <h2>${item.name?.S || 'Unnamed'}</h2>
-            <p><strong>ID:</strong> ${item.id?.S || '-'}</p>
-            <p>${item.description?.S || 'No description available'}</p>
-          `;
+  const card = document.createElement('div');
+  card.className = 'card';
 
-          container.appendChild(card);
-        });
+  card.innerHTML = `
+    <h2>${name || 'Unnamed'}</h2>
+    <p><strong>ID:</strong> ${id || '-'}</p>
+    <p>${description || 'No description available'}</p>
+  `;
+
+  container.appendChild(card);
+});
       } catch (err) {
         console.error(err);
         messageBox.textContent = '❌ Failed to load data.';
